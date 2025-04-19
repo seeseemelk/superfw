@@ -10,6 +10,8 @@ is to add many features only present in more expensive or sophisticated flash
 carts. Unfortunately we are limited to the actual hardware so certain features
 are impossible or very complex to implement.
 
+Find the website and documentation at https://superfw.davidgf.net/
+
 
 Installation
 ------------
@@ -125,12 +127,6 @@ save game, this is called Direct-Saving mode. This makes saving more reliable
 (no need for a battery!) and simpler to use (no need to reboot to ensure
 saving or using the in-game menu). Games that use Flash or EEPROM will display
 an option for direct-saving (this is the default choice in Auto mode).
-
-The Supercard features a 128KB SRAM memory, but only 64KB are usable at the
-moment (it is unknown whether/how the A15 bit can be mapped). Therefore games
-that use 128KB saves (all of them using Flash memory) need some special
-handling. These games require direct-saving mode or using the in-game menu
-and manually saving to SD card.
 
 Limits
 ------
