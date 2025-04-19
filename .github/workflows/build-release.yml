@@ -1,0 +1,54 @@
+name: SuperFW release
+run-name: Build a full SuperFW release
+
+on:
+  push:
+    branches: ["master"]
+
+jobs:
+  build-firmware:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Install dependencies
+        run: sudo apt-get install gcc-arm-none-eabi
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+      - name: Get short SHA
+        id: slug
+        run: echo "sha8=$(echo ${GITHUB_SHA} | cut -c1-8)" >> $GITHUB_OUTPUT
+      - name: Build firmware image
+        run: |
+          make COMPRESSION_RATIO=9
+          mv superfw.gba superfw.fw
+          cp superfw.dldi.payload superfw.dldi
+          cp res/patches.db patches.db
+      - name: Upload firmware build
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: superfw-${{ steps.slug.outputs.sha8 }}
+          path: superfw.fw
+      - name: Upload extra artifacts
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: superfw-dev-${{ steps.slug.outputs.sha8 }}
+          path: |
+            superfw.fw
+            superfw.dldi
+            patches.db
+      - name: Upload debug artifacts
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: superfw-debug-${{ steps.slug.outputs.sha8 }}
+          path: |
+            superfw.fw
+            directsave.elf
+            firmware.elf
+            firmware.ewram.elf
+            ingamemenu.elf
+            superfw.dldi.elf
+
