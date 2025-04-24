@@ -229,7 +229,7 @@ ingame_menu_entry:
   strh r0, [r1, #-2]; strh r0, [r1, #-2]
 
   // Save relevant I/O regs: timer, DMA, display... and disable them!
-  // Uses ~115KiB of space. The menu must have that much space after.
+  // Uses ~160KiB of space. The menu must have that much space after.
   ldr r1, spill_addr
   mov r3, $0
 
