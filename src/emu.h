@@ -24,11 +24,15 @@
 typedef unsigned(*t_loader_handler)(uint8_t *buffer, const char *fn, unsigned fs);
 
 typedef struct {
-  const char *extension;               // File extension
   const char *emu_name;                // Emulator (file) name
   const t_loader_handler hndlr;        // Handler function that loads any necessary header.
 } t_emu_loader;
 
-extern const t_emu_loader emu_loaders[];
+typedef struct {
+  const char *extension;               // File extension
+  const t_emu_loader *loaders;         // List of loaders
+} t_emu_platform;
+
+extern const t_emu_platform emu_platforms[];
 
 #endif

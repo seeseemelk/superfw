@@ -44,6 +44,11 @@ unsigned pocket_nes_header(uint8_t *buffer, const char *fn, unsigned fs) {
   return sizeof(hdr);
 }
 
+const t_emu_loader nes_loaders[] = {
+  { "pocketnes",  pocket_nes_header },
+  { NULL, NULL },
+};
+
 typedef struct {
   uint32_t ident;
   uint32_t romsize;
@@ -66,6 +71,59 @@ unsigned smsadvance_header(uint8_t *buffer, const char *fn, unsigned fs) {
 
   return sizeof(hdr);
 }
+
+typedef struct {
+  uint8_t rid;
+  uint8_t pad1[5];
+  uint8_t flags;
+  uint8_t pad2;
+  uint8_t ggmode;
+  uint8_t pad3[3];
+  char title[28];
+} t_drsms_header;
+
+static unsigned drsms_header(uint8_t *buffer, const char *fn, unsigned fs, uint8_t mode) {
+  t_drsms_header hdr = {
+    .rid = 1,
+    .pad1 = {0},
+    .flags = 0,
+    .pad2 = 0,
+    .ggmode = mode,
+    .pad3 = {0},
+  };
+  // Copy the base filename into the name buffer
+  const char *bname = file_basename(fn);
+
+  memcpy(hdr.title, bname, sizeof(hdr.title) - 1);
+  memcpy32(buffer, &hdr, sizeof(hdr));
+
+  return sizeof(hdr);
+}
+
+unsigned drsms_header_gg(uint8_t *buffer, const char *fn, unsigned fs) {
+  return drsms_header(buffer, fn, fs, 1);
+}
+
+unsigned drsms_header_sms(uint8_t *buffer, const char *fn, unsigned fs) {
+  return drsms_header(buffer, fn, fs, 0);
+}
+
+const t_emu_loader sms_loaders[] = {
+  { "drsms", drsms_header_sms },
+  { "smsadvance", smsadvance_header },
+  { NULL, NULL },
+};
+
+const t_emu_loader gg_loaders[] = {
+  { "drsms", drsms_header_gg },
+  { "smsadvance", smsadvance_header },
+  { NULL, NULL },
+};
+
+const t_emu_loader sg_loaders[] = {
+  { "smsadvance", smsadvance_header },
+  { NULL, NULL },
+};
 
 typedef struct {
   uint32_t ident;
@@ -91,6 +149,11 @@ unsigned wasabigba_header(uint8_t *buffer, const char *fn, unsigned fs) {
   return sizeof(hdr);
 }
 
+const t_emu_loader sv_loaders[] = {
+  { "wasabigba", wasabigba_header },
+  { NULL, NULL },
+};
+
 typedef struct {
   uint32_t ident;
   uint32_t romsize;
@@ -115,17 +178,28 @@ unsigned ngpgba_header(uint8_t *buffer, const char *fn, unsigned fs) {
   return sizeof(hdr);
 }
 
+const t_emu_loader ngc_loaders[] = {
+  { "ngpgba", ngpgba_header },
+  { NULL, NULL },
+};
+
+
+const t_emu_loader gbc_loaders[] = {
+  { "gbc-emu", NULL },
+  { NULL, NULL },
+};
+
 // Emulator loader table. Add entries here!
 
-const t_emu_loader emu_loaders[] = {
-  {"gb",  "gbc-emu",    NULL},
-  {"gbc", "gbc-emu",    NULL},
-  {"nes", "pocketnes",  pocket_nes_header},
-  {"sms", "smsadvance", smsadvance_header},
-  {"gg",  "smsadvance", smsadvance_header},
-  {"sg",  "smsadvance", smsadvance_header},
-  {"sv",  "wasabigba",  wasabigba_header},
-  {"ngc", "ngpgba",     ngpgba_header},
-  {NULL, NULL, NULL},        // End marker!
+const t_emu_platform emu_platforms[] = {
+  {"gb",  gbc_loaders},
+  {"gbc", gbc_loaders},
+  {"nes", nes_loaders},
+  {"sms", sms_loaders},
+  {"gg",  gg_loaders},
+  {"sg",  sg_loaders},
+  {"sv",  sv_loaders},
+  {"ngc", ngc_loaders},
+  {NULL, NULL},        // End marker!
 };
 

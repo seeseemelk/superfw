@@ -730,9 +730,9 @@ void patch_gen_callback(bool confirm) {
 }
 
 const t_emu_loader * get_emu_info(const char *ext) {
-  for (unsigned i = 0; emu_loaders[i].extension; i++)
-    if (!strcasecmp(ext, emu_loaders[i].extension))
-      return &emu_loaders[i];
+  for (unsigned i = 0; emu_platforms[i].extension; i++)
+    if (!strcasecmp(ext, emu_platforms[i].extension))
+      return emu_platforms[i].loaders;
 
   return NULL;
 }
@@ -791,7 +791,14 @@ void start_emu_game(const t_emu_loader *ldinfo, const char *fn, uint32_t fs) {
     spop.alert_msg = msgs[lang_id][errmsg];
   }
   else {
-    unsigned errcode = load_extemu_rom(fn, fs, ldinfo, loadrom_progress);
+    // Try to load the emu and ROM, keep trying if there's more than one emulatior option.
+    unsigned errcode = ERR_LOAD_NOEMU;
+    while (ldinfo->emu_name) {
+      unsigned errcode = load_extemu_rom(fn, fs, ldinfo, loadrom_progress);
+      if (errcode && errcode != ERR_LOAD_NOEMU)
+        break;
+      ldinfo++;
+    }
     unsigned errmsg = (errcode == ERR_LOAD_NOEMU) ? MSG_ERR_NOEMU :
                                                     MSG_ERR_READ;
     spop.alert_msg = msgs[lang_id][errmsg];
