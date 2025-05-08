@@ -27,17 +27,11 @@
 #define REG_DISPCNT_B    0x04001000
 #define REG_IPCSYNC      0x04000180
 #define REG_IME          0x04000208
+#define REG_MEMCTRL      0x04000800
 
 .section .text
 .thumb
 
-.global hard_reset
-hard_reset:
-  ldr r0, =REG_IME         // Disable interrupts
-  mov r1, $0
-  strh r1, [r0]
-
-  swi 0x26                 // Resets through the BIOS opening animation
 
 #define WAIT_SYNC(value, wcnt)  \
   1:                            \
@@ -127,11 +121,66 @@ nds_launch:
 .pool
 
 
+.section .ewram
+.balign 4
+ewram_test_zone:
+  .word 0x0, 0x0, 0x0, 0x0
+
+
 .section .iwram.text, "ax", %progbits
 .balign 4
 .arm
 
-.global soft_reset
+.global test_fast_ewram
+test_fast_ewram:
+  push {r4-r9}
+
+  // Test EWRAM reads/writes when overclocked
+  ldr r1, =REG_MEMCTRL
+  ldr r2, =ewram_test_zone
+
+  ldr r0, =0x0E000020          // EWRAM enabled and 1 wait state
+  str r0, [r1]
+
+  adr r0, .dummy_data
+  ldm r0, {r0, r3, r4, r5}
+
+  stm r2, {r0, r3, r4, r5}     // Write data to EWRAM
+  nop; nop; nop;
+  ldm r2, {r6, r7, r8, r9}     // Read the data back
+
+  cmp r0, r6
+  cmpeq r3, r7
+  cmpeq r4, r8
+  cmpeq r5, r9
+  moveq r0, $1                // r0 is one if the tests passed
+  movne r0, $0
+
+  ldr r2, =0x0D000020         // Go back to two wait states
+  str r2, [r1]
+
+  pop {r4-r9}
+  bx lr
+
+.dummy_data:
+  .word 0xDEADBEEF, 0x0BADC0DE, 0xABAD1DEA, 0xDAB1D6F0
+
+
+.global launch_reset
+launch_reset:
+  // Check arg[1], if non-zero, overclock EWRAM
+  cmp r1, $0
+  ldr r1, =REG_MEMCTRL
+  ldrne r2, =0x0E000020
+  ldreq r2, =0x0D000020
+  str r2, [r1]
+
+  // Check arg[0], if set, do a hard_reset
+  cmp r0, $0
+  bne hard_reset
+
+  // fallback to soft_reset
+
 soft_reset:
   ldr r0, =0x03007FFA
   mov r1, $0
@@ -174,6 +223,13 @@ soft_reset:
   swi 0x010000     // Clear all memory! Also I/O memory :D
   str r8, [r7]     // Restore WAITCNT
   swi 0x000000
+
+hard_reset:
+  ldr r0, =REG_IME         // Disable interrupts
+  mov r1, $0
+  strh r1, [r0]
+
+  swi 0x26                 // Resets through the BIOS opening animation
 
 
 .global running_on_nds

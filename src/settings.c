@@ -63,6 +63,7 @@ t_patch_policy patcher_default = PatchAuto;
 
 uint32_t boot_bios_splash = 0;   // Whether the BIOS boots to the splash screen
 uint32_t use_fastsd = 0;         // Use fast mirrors for ROM loading.
+uint32_t use_fastew = 0;         // Overclock EWRAM while playing.
 
 uint32_t save_path_default = SaveSavegameDir;
 uint32_t state_path_default = StateSavestateDir;
@@ -129,6 +130,7 @@ bool save_settings() {
     "sram_backup_count=%lu\n"
     "enable_cheats=%lu\n"
     "enable_fastsd=%lu\n"
+    "enable_fastewram=%lu\n"
     "default_patcher=%u\n"
     "default_igmenu=%lu\n"
     "default_rtcpatch=%lu\n"
@@ -137,7 +139,7 @@ bool save_settings() {
     "default_savegame=%lu\n"
     "prefer_directsave=%lu\n",
     hotkey_combo, boot_bios_splash, save_path_default, state_path_default,
-    backup_sram_default, enable_cheats, use_fastsd,
+    backup_sram_default, enable_cheats, use_fastsd, use_fastew,
     (unsigned int)patcher_default, ingamemenu_default, rtcpatch_default,
     rtcvalue_default.hour, rtcvalue_default.mins,
     rtcvalue_default.day + 1, rtcvalue_default.month + 1, rtcvalue_default.year,
@@ -177,6 +179,7 @@ static void parse_settings(void *usr, const char *var, const char *value) {
       { "enable_cheats",     &enable_cheats },
       { "default_igmenu",    &ingamemenu_default },
       { "enable_fastsd",     &use_fastsd },
+      { "enable_fastewram",  &use_fastew },
       { "default_rtcpatch",  &rtcpatch_default },
       { "default_loadgame",  &autoload_default },
       { "default_savegame",  &autosave_default },

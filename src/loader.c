@@ -323,10 +323,7 @@ unsigned load_gba_rom(
   // Set the ROM into read only mode, disable SD card reader as well.
   set_supercard_mode(MAPPED_SDRAM, false, false);
 
-  if (boot_bios_splash)
-    hard_reset();
-  else
-    soft_reset();
+  launch_reset(boot_bios_splash, use_fastew);
 
   return 0;
 }
@@ -376,7 +373,7 @@ void load_gbc_rom(const char *fn, uint32_t fs, progress_fn progress) {
   // Set the ROM into read only mode, disable SD card reader as well.
   set_supercard_mode(MAPPED_SDRAM, false, false);
 
-  soft_reset();
+  launch_reset(false, use_fastew);
 }
 
 
@@ -449,7 +446,7 @@ unsigned load_extemu_rom(const char *fn, uint32_t fs, const t_emu_loader *ldinfo
   set_supercard_mode(MAPPED_SDRAM, false, false);
 
   REG_WAITCNT = 0x0;
-  soft_reset();
+  launch_reset(false, use_fastew);
 
   return 0;
 }

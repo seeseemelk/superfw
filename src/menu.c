@@ -39,6 +39,7 @@
 #include "res/logo.h"
 
 extern t_card_info sd_info;
+extern bool fastew;
 
 #define MENUTAB_RECENT          0    // Browses recently loaded ROMs (can be disabled / hidden)
 #define MENUTAB_ROMBROWSE       1    // Browses ROMs and launches games.
@@ -97,20 +98,21 @@ enum {
   SettHotkey   =  1,
   SettBootType =  2,
   SettFastSD   =  3,
-  SettSaveLoc  =  4,
-  SettSaveBkp  =  5,
-  SettStateLoc =  6,
-  SettCheatEn  =  7,
-  SettTitle2   =  8,
-  DefsPatchEng =  9,
-  DefsGamMenu  = 10,
-  DefsRTCEnb   = 11,
-  DefsRTCVal   = 12,
-  DefsLoadPol  = 13,
-  DefsSavePol  = 14,
-  DefsPrefDS   = 15,
-  SettSave     = 16,
-  SettMAX      = 16,
+  SettFastEWRAM = 4,
+  SettSaveLoc  =  5,
+  SettSaveBkp  =  6,
+  SettStateLoc =  7,
+  SettCheatEn  =  8,
+  SettTitle2   =  9,
+  DefsPatchEng = 10,
+  DefsGamMenu  = 11,
+  DefsRTCEnb   = 12,
+  DefsRTCVal   = 13,
+  DefsLoadPol  = 14,
+  DefsSavePol  = 15,
+  DefsPrefDS   = 16,
+  SettSave     = 17,
+  SettMAX      = 17,
 };
 
 enum {
@@ -1524,65 +1526,70 @@ void render_settings(volatile uint8_t *frame) {
   unsigned optcnt = 0;
   const unsigned colx = 170;           // Center point for the selection boxes
 
-  if (msk & 0x0001)
+  if (msk & 0x00001)
     draw_central_text(msgs[lang_id][MSG_SET_TITL1], frame, SCREEN_WIDTH/2, 22 + 20*optcnt++);
 
-  if (msk & 0x0002) {
+  if (msk & 0x00002) {
     npf_snprintf(tmp, sizeof(tmp), "< %s >", hotkey_list[hotkey_combo].cname);
     draw_text_ovf(msgs[lang_id][MSG_SETT_HOTK], frame, 8, 22 + 20*optcnt, 224);
     draw_central_text(tmp, frame, colx, 22 + 20*optcnt++);
   }
 
-  if (msk & 0x0004) {
+  if (msk & 0x00004) {
     draw_text_ovf(msgs[lang_id][MSG_SETT_BOOT], frame, 8, 22 + 20*optcnt, 224);
     draw_central_text(msgs[lang_id][MSG_BOOT_TYPE0 + boot_bios_splash], frame, colx, 22 + 20*optcnt++);
   }
 
-  if (msk & 0x0008) {
+  if (msk & 0x00008) {
     draw_text_ovf(msgs[lang_id][MSG_SETT_FASTSD], frame, 8, 22 + 20*optcnt, 224);
     draw_central_text(msgs[lang_id][use_fastsd ? MSG_KNOB_ENABLED : MSG_KNOB_DISABLED], frame, colx, 22 + 20*optcnt++);
   }
 
-  if (msk & 0x0010) {
+  if (msk & 0x00010) {
+    draw_text_ovf(msgs[lang_id][MSG_SETT_FASTEW], frame, 8, 22 + 20*optcnt, 224);
+    draw_central_text(msgs[lang_id][use_fastew ? MSG_KNOB_ENABLED : MSG_KNOB_DISABLED], frame, colx, 22 + 20*optcnt++);
+  }
+
+  if (msk & 0x00020) {
     draw_text_ovf(msgs[lang_id][MSG_SETT_SAVET], frame, 8, 22 + 20*optcnt, 224);
     draw_central_text(msgs[lang_id][MSG_SAVE_TYPE0 + save_path_default], frame, colx, 22 + 20*optcnt++);
   }
 
-  if (msk & 0x0020) {
+  if (msk & 0x00040) {
     npf_snprintf(tmp, sizeof(tmp), "< %lu >", backup_sram_default);
     draw_text_ovf(msgs[lang_id][MSG_SETT_SAVEBK], frame, 8, 22 + 20*optcnt, 224);
     draw_central_text(tmp, frame, colx, 22 + 20*optcnt++ );
   }
 
-  if (msk & 0x0040) {
+  if (msk & 0x00080) {
     draw_text_ovf(msgs[lang_id][MSG_SETT_STATET], frame, 8, 22 + 20*optcnt, 224);
     draw_central_text(msgs[lang_id][MSG_STTE_TYPE0 + state_path_default], frame, colx, 22 + 20*optcnt++);
   }
 
-  if (msk & 0x0080) {
+  if (msk & 0x00100) {
     draw_text_ovf(msgs[lang_id][MSG_SETT_CHTEN], frame, 8, 22 + 20*optcnt, 224);
     draw_central_text(msgs[lang_id][enable_cheats ? MSG_KNOB_ENABLED : MSG_KNOB_DISABLED], frame, colx, 22 + 20*optcnt++);
   }
 
-  if (msk & 0x0100)
+  if (msk & 0x00200)
     draw_central_text(msgs[lang_id][MSG_SET_TITL2], frame, SCREEN_WIDTH/2, 22 + 20*optcnt++);
 
-  if (msk & 0x0200) {
+  if (msk & 0x00400) {
     draw_text_ovf(msgs[lang_id][MSG_DEFS_PATCH], frame, 8, 22 + 20*optcnt, 224);
     draw_central_text(msgs[lang_id][MSG_PATCH_TYPE0 + patcher_default], frame, colx, 22 + 20*optcnt++);
   }
 
-  if (msk & 0x0400) {
+  if (msk & 0x00800) {
     draw_text_ovf(msgs[lang_id][MSG_LOADER_MENU], frame, 8, 22 + 20*optcnt, 224);
     draw_central_text(msgs[lang_id][MSG_KNOB_DISABLED + ingamemenu_default], frame, colx, 22 + 20*optcnt++);
   }
 
-  if (msk & 0x0800) {
+  if (msk & 0x01000) {
     draw_text_ovf(msgs[lang_id][MSG_LOADER_RTCE], frame, 8, 22 + 20*optcnt, 224);
     draw_central_text(msgs[lang_id][MSG_KNOB_DISABLED + rtcpatch_default], frame, colx, 22 + 20*optcnt++);
   }
 
-  if (msk & 0x1000) {
+  if (msk & 0x02000) {
     npf_snprintf(tmp, sizeof(tmp), "20%02d/%02d/%02d %02d:%02d",
       rtcvalue_default.year, rtcvalue_default.month + 1, rtcvalue_default.day + 1,
       rtcvalue_default.hour, rtcvalue_default.mins);
@@ -1590,17 +1597,17 @@ void render_settings(volatile uint8_t *frame) {
     draw_central_text(tmp, frame, colx, 22 + 20*optcnt++);
   }
 
-  if (msk & 0x2000) {
+  if (msk & 0x04000) {
     draw_text_ovf(msgs[lang_id][MSG_LOADER_LOADP], frame, 8, 22 + 20*optcnt, 224);
     draw_central_text(msgs[lang_id][MSG_DEF_LOADP0 + (autoload_default ^ 1)], frame, colx, 22 + 20*optcnt++);
   }
 
-  if (msk & 0x4000) {
+  if (msk & 0x08000) {
     draw_text_ovf(msgs[lang_id][MSG_LOADER_SAVEP], frame, 8, 22 + 20*optcnt, 224);
     draw_central_text(msgs[lang_id][autosave_default ? MSG_DEF_SAVEP0 : MSG_DEF_SAVEP1], frame, colx, 22 + 20*optcnt++);
   }
 
-  if (msk & 0x8000) {
+  if (msk & 0x10000) {
     draw_text_ovf(msgs[lang_id][MSG_LOADER_PREFDS], frame, 8, 22 + 20*optcnt, 224);
     draw_central_text(msgs[lang_id][autosave_prefer_ds ? MSG_KNOB_ENABLED : MSG_KNOB_DISABLED], frame, colx, 22 + 20*optcnt++);
   }
@@ -1612,6 +1619,7 @@ void render_settings(volatile uint8_t *frame) {
                       smenu.set.selector == SettSaveLoc  ? MSG_SAVE_TYPE_I0 + save_path_default :
                       smenu.set.selector == SettSaveBkp  ? MSG_BACKUP_I :
                       smenu.set.selector == SettFastSD   ? MSG_FASTSD_I :
+                      smenu.set.selector == SettFastEWRAM? MSG_FASTEW_I :
                       smenu.set.selector == DefsPatchEng ? MSG_PATCH_TYPE_I0 + patcher_default :
                       smenu.set.selector == DefsLoadPol  ? MSG_DEF_LOADP_I0 + (autoload_default ^ 1) :
                       smenu.set.selector == DefsSavePol  ? MSG_DEF_SAVEP_I0 + (autosave_default ^ 1) :
@@ -2495,6 +2503,8 @@ void menu_keypress(unsigned newkeys) {
           autosave_prefer_ds ^= 1;
         else if (smenu.set.selector == SettFastSD)
           use_fastsd ^= 1;
+        else if (smenu.set.selector == SettFastEWRAM)
+          use_fastew = fastew ? (use_fastew ^ 1) : 0;
       }
 
       if (newkeys & KEY_BUTTA && smenu.set.selector == DefsRTCVal) {

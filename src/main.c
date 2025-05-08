@@ -31,6 +31,7 @@
 // Global variables
 FATFS sdfs;          // FatFS mounted filesystem
 bool isgba = true;   // Has some alternative paths for NDS.
+bool fastew = false; // EWRAM can be overclocked (from the look of it at least).
 bool fastsd = false; // Whether we use faster SD mirrors for SD operations.
 
 uint32_t flash_deviceid;
@@ -215,6 +216,8 @@ static int main_nds() {
 int main() {
   // Detect whether we are running on GBA or NDS.
   isgba = !running_on_nds();
+  // Similarly detect if EWRAM seems overclockable (GBA but not micro).
+  fastew = test_fast_ewram();
 
   // Take a look at what flash we have.
   flash_deviceid = flash_identify();

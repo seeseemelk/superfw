@@ -48,6 +48,7 @@ extern uint32_t anim_speed;
 extern t_patch_policy patcher_default;
 extern uint32_t boot_bios_splash;
 extern uint32_t use_fastsd;
+extern uint32_t use_fastew;
 extern uint32_t save_path_default;
 extern uint32_t state_path_default;
 extern uint32_t backup_sram_default;

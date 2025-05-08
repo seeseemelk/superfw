@@ -82,6 +82,7 @@ SECTIONS
 
     .rodata : ALIGN(4)
     {
+        *(.ewram)
         *(.rodata)
         *(.rodata*)
         *(.gnu.linkonce.r.*) /* Used for vague linking */

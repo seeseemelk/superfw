@@ -52,6 +52,7 @@
 #define REG_IF           (*((volatile uint16_t *) 0x04000202))
 #define REG_IME          (*((volatile uint16_t *) 0x04000208))
 #define REG_WAITCNT      (*((volatile uint16_t *) 0x04000204))
+#define REG_MEMCTRL      (*((volatile uint16_t *) 0x04000800))
 
 #define REG_DISPCNT      (*((volatile uint16_t *) 0x04000000))
 #define REG_DISPSTAT     (*((volatile uint16_t *) 0x04000004))

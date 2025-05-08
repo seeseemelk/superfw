@@ -144,10 +144,10 @@ typedef enum {
 } t_sram_save_policy;
 
 // ASM auxiliar routines
-void soft_reset();
-void hard_reset();
+void launch_reset(bool via_bios, bool ewram_overclock);
 void wait_ms(unsigned ms);
 bool running_on_nds();
+bool test_fast_ewram();
 void nds_launch();
 void gba_irq_handler();
 void set_irq_enable(bool enable);
