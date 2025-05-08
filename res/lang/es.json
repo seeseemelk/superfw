@@ -202,5 +202,7 @@
     "IMENU_SAVE2_RST": "Guardar y reiniciar al menú",
     "IMENU_SAVING_BLOCKED": "¡Guardado en proceso!",
     "MSG_SETT_FASTSD": "Carga ROM rápida",
-    "MSG_FASTSD_I": "Carga más rápidamente los ROMs. Puede resultar en inestabilidad en algunas consolas."
+    "MSG_FASTSD_I": "Carga más rápidamente los ROMs. Puede resultar en inestabilidad en algunas consolas.",
+    "MSG_SETT_FASTEW": "Overclock EWRAM",
+    "MSG_FASTEW_I": "Realiza overclock en la memoria EWRAM, mejora el rendimiento de algunos juegos. No funciona en NDS o GBA Micro"
 }

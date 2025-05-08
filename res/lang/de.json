@@ -202,5 +202,7 @@
     "IMENU_SAVE2_RST": "Speichern und ins Menü",
     "IMENU_SAVING_BLOCKED": "Speichern läuft!",
     "MSG_SETT_FASTSD": "ROM schnell laden",
-    "MSG_FASTSD_I": "Benutzt einen Mechanismus, um Spiele schnell zu laden. Kann bei einigen Geräten zu einem Crash oder Spielkorruption führen"
+    "MSG_FASTSD_I": "Benutzt einen Mechanismus, um Spiele schnell zu laden. Kann bei einigen Geräten zu einem Crash oder Spielkorruption führen",
+    "MSG_SETT_FASTEW": "EWRAM overclock",
+    "MSG_FASTEW_I": "Overclock EWRAM for some extra performance. Not available on NDS or GBA Micro"
 }

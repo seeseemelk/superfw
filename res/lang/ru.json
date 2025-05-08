@@ -202,5 +202,7 @@
     "IMENU_SAVE2_RST": "Сохранить и выйти в меню",
     "IMENU_SAVING_BLOCKED": "Происходит сохранение!",
     "MSG_SETT_FASTSD": "Быстр. загрузка",
-    "MSG_FASTSD_I": "Используется механизм быстрой загрузки, может привести к ошибкам или некорректному чтению"
+    "MSG_FASTSD_I": "Используется механизм быстрой загрузки, может привести к ошибкам или некорректному чтению",
+    "MSG_SETT_FASTEW": "EWRAM overclock",
+    "MSG_FASTEW_I": "Overclock EWRAM for some extra performance. Not available on NDS or GBA Micro"
 }

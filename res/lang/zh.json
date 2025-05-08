@@ -202,5 +202,7 @@
     "IMENU_SAVE2_RST": "存档并返回主界面",
     "IMENU_SAVING_BLOCKED": "请等存档完成后再操作!",
     "MSG_SETT_FASTSD": "快速ROM读取",
-    "MSG_FASTSD_I": "启用快速的ROM读取机制, 在部分设备上可能引发问题"
+    "MSG_FASTSD_I": "启用快速的ROM读取机制, 在部分设备上可能引发问题",
+    "MSG_SETT_FASTEW": "EWRAM overclock",
+    "MSG_FASTEW_I": "Overclock EWRAM for some extra performance. Not available on NDS or GBA Micro"
 }
