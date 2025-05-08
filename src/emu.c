@@ -183,6 +183,41 @@ const t_emu_loader ngc_loaders[] = {
   { NULL, NULL },
 };
 
+typedef struct {
+  char title[32];
+  uint32_t romsize;
+  uint32_t flags;
+  uint32_t spriteflags;
+  uint32_t padding;
+  // Fake header pretending to pass as a NES ROM
+  uint32_t nes_sig;
+  char padding2[12];
+} t_pceadvance_header;
+
+unsigned pceadvance_header(uint8_t *buffer, const char *fn, unsigned fs) {
+  // Probably some bad copy paste made them parse the ROM as a NES ROM.
+  // We add a "fake" header to the ROM.
+  t_pceadvance_header hdr = {
+    .title = "",
+    .romsize = fs + 16,
+    .flags = 0x4,            // Should be zero for Japanese ROMs? They work anyway?
+    .spriteflags = 0,
+    .padding = 0,
+    .nes_sig = 0x1A53454E,
+    .padding2 = "@          ",
+  };
+  // Copy the base filename into the name buffer
+  const char *bname = file_basename(fn);
+  memcpy(hdr.title, bname, sizeof(hdr.title) - 1);
+
+  memcpy32(buffer, &hdr, sizeof(hdr));
+  return sizeof(hdr);
+}
+
+const t_emu_loader pce_loaders[] = {
+  { "pceadvance", pceadvance_header },
+  { NULL, NULL },
+};
 
 const t_emu_loader gbc_loaders[] = {
   { "gbc-emu", NULL },
@@ -200,6 +235,7 @@ const t_emu_platform emu_platforms[] = {
   {"sg",  sg_loaders},
   {"sv",  sv_loaders},
   {"ngc", ngc_loaders},
+  {"pce", pce_loaders},
   {NULL, NULL},        // End marker!
 };
 
