@@ -25,40 +25,58 @@ jobs:
         id: tagversion
         if: startsWith(github.ref, 'refs/tags/')
         run: fullref="${{ github.ref }}"; tagversion=${fullref#"refs/tags/"}; echo "tagversion=${tagversion}" >> $GITHUB_OUTPUT
-      - name: Build firmware image
+      - name: Arrange files
         run: |
-          make COMPRESSION_RATIO=9
-          mv superfw.gba superfw.fw
-          cp superfw.dldi.payload superfw.dldi
           cp res/patches.db patches.db
-          zip superfw.zip superfw.fw
+      - name: Build firmware image (SD)
+        run: |
+          make BOARD=sd clean && make BOARD=sd COMPRESSION_RATIO=9
+          mv superfw.gba superfw-sd.fw
+          cp superfw.dldi.payload superfw-sd.dldi
+      - name: Upload debug artifacts (SD)
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: superfw-sd-debug-${{ steps.slug.outputs.sha8 }}
+          path: |
+            superfw-*.fw
+            directsave.elf
+            firmware.elf
+            firmware.ewram.elf
+            ingamemenu.elf
+            superfw.dldi.elf
+      - name: Build firmware image (Lite)
+        run: |
+          make BOARD=lite clean && make BOARD=lite COMPRESSION_RATIO=9
+          mv superfw.gba superfw-lite.fw
+          cp superfw.dldi.payload superfw-lite.dldi
+      - name: Upload debug artifacts (Lite)
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: superfw-lite-debug-${{ steps.slug.outputs.sha8 }}
+          path: |
+            superfw-*.fw
+            directsave.elf
+            firmware.elf
+            firmware.ewram.elf
+            ingamemenu.elf
+            superfw.dldi.elf
       - name: Upload firmware build
         if: ${{ success() }}
         uses: actions/upload-artifact@v4
         with:
           name: superfw-${{ steps.slug.outputs.sha8 }}
-          path: superfw.fw
+          path: superfw-*.fw
       - name: Upload extra artifacts
         if: ${{ success() }}
         uses: actions/upload-artifact@v4
         with:
           name: superfw-dev-${{ steps.slug.outputs.sha8 }}
           path: |
-            superfw.fw
-            superfw.dldi
+            superfw-*.fw
+            superfw-*.dldi
             patches.db
-      - name: Upload debug artifacts
-        if: ${{ success() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: superfw-debug-${{ steps.slug.outputs.sha8 }}
-          path: |
-            superfw.fw
-            directsave.elf
-            firmware.elf
-            firmware.ewram.elf
-            ingamemenu.elf
-            superfw.dldi.elf
       - name: Create release
         id: create_release
         if: startsWith(github.ref, 'refs/tags/')
@@ -70,14 +88,24 @@ jobs:
           release_name: Release ${{ github.ref }}
           draft: false
           prerelease: false
-      - name: Upload Release Asset
+      - name: Upload Release Asset (SD)
         uses: actions/upload-release-asset@v1
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./superfw.zip
-          asset_name: superfw-${{ steps.tagversion.outputs.tagversion }}.zip
+          asset_path: ./superfw-sd.fw
+          asset_name: superfw-sd-${{ steps.tagversion.outputs.tagversion }}.zip
+          asset_content_type: application/zip
+      - name: Upload Release Asset (Lite)
+        uses: actions/upload-release-asset@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./superfw-lite.fw
+          asset_name: superfw-lite-${{ steps.tagversion.outputs.tagversion }}.zip
           asset_content_type: application/zip
 
