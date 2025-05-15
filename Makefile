@@ -10,8 +10,19 @@ OBJCOPY		:= $(PREFIX)objcopy
 
 COMPRESSION_RATIO ?= 3
 
+# BOARD can be "sd" or "lite"
+BOARD ?= sd
+
+ifeq ($(BOARD),lite)
+  GLOBAL_DEFINES ?= -DSUPERCARD_LITE_IO
+else ifeq ($(BOARD),sd)
+  # No need for extra flags
+else
+  $(error No valid board specified in BOARD)
+endif
+
 CFLAGS=-O2 -ggdb \
-       -D__GBA__ \
+       -D__GBA__ $(GLOBAL_DEFINES) \
        -DSC_FAST_ROM_MIRROR="use_fast_mirror()" \
        -DSD_PREERASE_BLOCKS_WRITE \
        -DVERSION_WORD="$(VERSION_WORD)" \
@@ -20,20 +31,20 @@ CFLAGS=-O2 -ggdb \
 
 
 INGAME_CFLAGS=-Os -ggdb \
-              -D__GBA__ \
+              -D__GBA__ $(GLOBAL_DEFINES) \
               -DNO_SUPERCARD_INIT \
               -DSD_PREERASE_BLOCKS_WRITE \
               -mcpu=arm7tdmi -mtune=arm7tdmi -Wall -Isrc -I. \
               -mthumb -flto
 
 DLDI_CFLAGS=-Os -ggdb \
-            -D__GBA__ \
+            -D__GBA__ $(GLOBAL_DEFINES) \
             -DSD_PREERASE_BLOCKS_WRITE \
             -mcpu=arm7tdmi -mtune=arm7tdmi -Wall -Isrc -I. \
             -mthumb -flto -fPIC
 
 DIRECTSAVE_CFLAGS=-Os -ggdb \
-                 -D__GBA__ \
+                 -D__GBA__ $(GLOBAL_DEFINES) \
                  -DNO_SUPERCARD_INIT \
                  -mcpu=arm7tdmi -mtune=arm7tdmi -Wall -Isrc -I. \
                  -marm -flto -fPIC

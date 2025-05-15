@@ -66,22 +66,35 @@
 
 // Given a desired flash address, it generates the gamepak address necessary
 // to access it, taking into consideration the address permutation described.
-static uint32_t addr_perm(uint32_t addr) {
-  return (addr & 0xFFFFFE02) |
-         ((addr & 0x001) << 7) |
-         ((addr & 0x004) << 4) |
-         ((addr & 0x008) << 2) |
-         ((addr & 0x010) >> 4) |
-         ((addr & 0x020) >> 3) |
-         ((addr & 0x040) << 2) |
-         ((addr & 0x080) >> 3) |
-         ((addr & 0x100) >> 5);
-}
+#ifndef SUPERCARD_LITE_IO
+  static uint32_t addr_perm(uint32_t addr) {
+    return (addr & 0xFFFFFE02) |
+           ((addr & 0x001) << 7) |
+           ((addr & 0x004) << 4) |
+           ((addr & 0x008) << 2) |
+           ((addr & 0x010) >> 4) |
+           ((addr & 0x020) >> 3) |
+           ((addr & 0x040) << 2) |
+           ((addr & 0x080) >> 3) |
+           ((addr & 0x100) >> 5);
+  }
+#else
+  static uint32_t addr_perm(uint32_t addr) {
+    return addr;
+  }
+#endif
+
+// Mapping the Flash with WriteEnable set is a bit tricky on Lite
+#ifndef SUPERCARD_LITE_IO
+  #define FLASH_WE_MODE() set_supercard_mode(MAPPED_FIRMWARE, true, false)
+#else
+  #define FLASH_WE_MODE() write_supercard_mode(0x1510)
+#endif
 
 // Returns manufacturer code in the higher bits, device id in the lower bits.
 uint32_t flash_identify() {
   // Internal flash in write mode.
-  set_supercard_mode(MAPPED_FIRMWARE, true, false);
+  FLASH_WE_MODE();
 
   // Reset any previous command that might be ongoing.
   for (unsigned i = 0; i < 32; i++)
@@ -105,7 +118,7 @@ uint32_t flash_identify() {
 
 // Performs a flash full-chip erase.
 bool flash_erase() {
-  set_supercard_mode(MAPPED_FIRMWARE, true, false);
+  FLASH_WE_MODE();
 
   // Reset any previous command that might be ongoing.
   for (unsigned i = 0; i < 32; i++)
@@ -137,7 +150,7 @@ bool flash_erase() {
 // Uses a temporary buffer, since the buffer can (and usually is) on SDRAM.
 bool flash_program(const uint8_t *buf, unsigned size) {
   // Reset any previous command that might be ongoing.
-  set_supercard_mode(MAPPED_FIRMWARE, true, false);
+  FLASH_WE_MODE();
   SLOT2_BASE_U16[0] = 0x00F0;
 
   for (unsigned i = 0; i < size; i += 512) {
@@ -145,7 +158,7 @@ bool flash_program(const uint8_t *buf, unsigned size) {
     set_supercard_mode(MAPPED_SDRAM, true, true);
     memcpy(tmp, &buf[i], 512);
 
-    set_supercard_mode(MAPPED_FIRMWARE, true, false);
+    FLASH_WE_MODE();
     for (unsigned off = 0; off < 512 && i+off < size; off += 2) {
       const uint32_t addr = i + off;
       const uint16_t value = tmp[off] | (tmp[off+1] << 8);
@@ -181,7 +194,7 @@ bool flash_program(const uint8_t *buf, unsigned size) {
 bool flash_verify(const uint8_t *buf, unsigned size) {
   for (unsigned i = 0; i < size; i += 512) {
     uint8_t tmp[512];
-    set_supercard_mode(MAPPED_FIRMWARE, true, false);
+    FLASH_WE_MODE();
     for (unsigned j = 0; j < 512; j++)
       tmp[j] = SLOT2_BASE_U8[i + j];
 

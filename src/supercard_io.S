@@ -33,6 +33,8 @@
 // Used to read data from SD card.
 #define SC_READ_REGISTER_8      (SC_MIRROR_BASE_8 + 0x01100000)
 #define SC_READ_REGISTER_A      (SC_MIRROR_BASE_A + 0x01100000)
+#define SCLITE_DATA_REGISTER32  (SC_MIRROR_BASE_8 + 0x01200000)
+
 // Used to send/received commands.
 #define SC_RDWR_COMMAND         (SC_MIRROR_BASE_8 + 0x01800000)
 // ^^ CMD interface (bit 0 is an input pin, bit 7 is the output bit)
@@ -43,6 +45,12 @@
 #define SD_ERR_WRITETIMEOUT            11
 #define CMD_WAIT_DATA            0x400000     // Aprox ~1s as data timeout
 
+
+.global sc_read_sectors_w0   // Version that uses 0x08000000-0x09FFFFFF addrs
+.global sc_read_sectors_w1   // Version that uses 0x0A000000-0x0BFFFFFF addrs
+
+#ifndef SUPERCARD_LITE_IO
+
 // Reads N 512 byte sectors mapped via ROM mappings into the provided buffer
 // as fast as possible. Assumes that the read operation was issued and that
 // it needs to wait for the block (by detecting the first zero bit).
@@ -51,8 +59,6 @@
 
 // r0: output byte buffer (output)
 // r1: number of blocks to read
-.global sc_read_sectors_w0   // Version that uses 0x08000000-0x09FFFFFF addrs
-.global sc_read_sectors_w1   // Version that uses 0x0A000000-0x0BFFFFFF addrs
 
 .type sc_read_sectors_w0,function
 sc_read_sectors_w0:
@@ -157,6 +163,117 @@ sc_read_sectors_w1:
   pop {r4-r12}
   bx lr
 
+#else
+
+// This is the same as above, but using the Supercard Lite faster I/O interface.
+// The cart clocks data for us and we can read it in 32 bit blocks (we assume
+// that it clocks the SD card 8 times under the hood). We can't use the faster
+// waitstates otherwise it doesn't have enough time to do so.
+
+// r0: output byte buffer (output)
+// r1: number of blocks to read
+
+.type sc_read_sectors_w0,function
+sc_read_sectors_w0:
+.type sc_read_sectors_w1,function
+sc_read_sectors_w1:
+
+  push {r4-r11}
+  ldr r5, =SCLITE_DATA_REGISTER32
+
+6:
+  tst r0, $3                 // Check if the buffer address is aligned
+  bne 5f                     // Branch to the slow routine.
+
+1:
+  // Perform a wait on the data bus, until the bits are pulled zero once.
+  mov r3, $(CMD_WAIT_DATA)
+  mov r4, $(SC_READ_REGISTER_16)
+  2:
+    subs r3, r3, $1
+    moveq r0, $1      // Non zero retvalue on timeout error
+    beq 3f            // Function return.
+    ldrh r2, [r4]
+    tst r2, $(SD_DATA0)
+  bne 2b
+
+  ldrh r2, [r5]       // Discard the first 32 bits
+
+  // Go ahead and read a 512 byte sector
+  // Repeat 16 * 32 bytes = 512 bytes.
+  .rept 16
+    // Reads 256 bits
+    ldmia r5, {r2, r3, r6, r7, r8, r9, r10, r11}
+    // Write the data back to the buffer
+    stmia r0!, {r2, r3, r6, r7, r8, r9, r10, r11}
+  .endr
+
+  // Reads 64 bits (8 bytes of checksum) in one go.
+  ldmia r5, {r2, r3}
+
+  ldrh r2, [r4]       // Final clock: should go all high (0xF)
+
+  subs r1, r1, $1
+  bne 1b
+
+  mov r0, $0            // Return value: success
+3:
+  pop {r4-r11}
+  bx lr
+
+  // Unaligned code! It should be slower (but also smaller)
+5:
+  // Perform a wait on the data bus, until the bits are pulled zero once.
+  mov r3, $(CMD_WAIT_DATA)
+  mov r4, $(SC_READ_REGISTER_16)
+  2:
+    subs r3, r3, $1
+    moveq r0, $1      // Non zero retvalue on timeout error
+    beq 3f            // Function return.
+    ldrh r2, [r4]
+    tst r2, $(SD_DATA0)
+  bne 2b
+
+  ldrh r2, [r5]       // Discard the first 32 bits
+
+  // Go ahead and read a 512 byte sector
+  mov r6, $(512 / 8)     // Performs eight bytes per iteration
+
+  2:
+    ldmia r5, {r2, r3}   // Reads 8 bytes in one go.
+    strb r2, [r0], #1    // Stores the received byte
+    lsr r2, #8
+    strb r2, [r0], #1
+    lsr r2, #8
+    strb r2, [r0], #1
+    lsr r2, #8
+    strb r2, [r0], #1
+    strb r3, [r0], #1
+    lsr r3, #8
+    strb r3, [r0], #1
+    lsr r3, #8
+    strb r3, [r0], #1
+    lsr r3, #8
+    strb r3, [r0], #1
+
+    subs r6, r6, $1
+    bne 2b
+
+  // Reads 64 bits (8 bytes of checksum) in one go.
+  ldmia r5, {r2, r3}
+
+  ldrh r2, [r4]       // Final clock: should go all high (0xF)
+
+  subs r1, r1, $1
+  bne 5b
+
+  mov r0, $0            // Return value: success
+3:
+  pop {r4-r11}
+  bx lr
+
+#endif
+
 
 // Writes a bunch of 512 byte sectors, calculating checksums for them as well
 // as checking any error codes returned (and waiting between blocks).
@@ -166,6 +283,8 @@ sc_read_sectors_w1:
 // returns non zero on timeout or data rejected (ie. CRC error, write error...)
 .global sc_write_sectors_w0   // Version that uses 0x08000000-0x09FFFFFF addrs
 .global sc_write_sectors_w1   // Version that uses 0x0A000000-0x0BFFFFFF addrs
+
+#ifndef SUPERCARD_LITE_IO
 
 .type sc_write_sectors_w0,function
 sc_write_sectors_w0:
@@ -291,6 +410,214 @@ sc_write_sectors_w1:
   pop {r4-r6, lr}
   mov r0, $1
   bx lr
+
+#else
+
+.type sc_write_sectors_w0,function
+sc_write_sectors_w0:
+.type sc_write_sectors_w1,function
+sc_write_sectors_w1:
+
+  push {r4-r11, lr}
+  mov r6, $(SC_WRITE_REGISTER_8)
+  mov r7, $(SCLITE_DATA_REGISTER32)
+
+  sub sp, $8    // Some space for the CRC buffer
+  mov r4, r0    // Input buffer
+  mov r5, r1    // Block count
+
+  // Calculate crc for the first block.
+  mov r1, sp
+  bl crc16_nibble_512_nolut
+
+  // See if the input buffer is aligned for more performance.
+  tst r4, $3
+  bne 9f
+
+  1: // Loop r5 times. Try to perform checksum while waiting for write to finish.
+
+    // Go ahead send the data! Send the first byte token (0xFE? should be 0xFC!)
+    mov r1, $0
+    mov r2, $0xFFFFFFFF
+    str r2, [r6]
+    str r2, [r6]
+    str r2, [r6]
+    strh r2, [r6]
+    strh r1, [r6]
+
+    .rept 16
+      ldm r4!, {r0, r1, r2, r3, r8, r9, r10, r11}
+      stm r7, {r0, r1, r2, r3, r8, r9, r10, r11}
+    .endr
+
+    // Send checksum in one go
+    ldr r2, [sp, #0]
+    ldr r3, [sp, #4]
+    stm r7, {r2, r3}
+
+    // Response token is 8 bits, only transmitted via DAT0.
+    // Write one to the bus, read a couple more times (ignore 3 MSB)
+    mov  r2, $(~0)            // All data lines high after last bit
+    strh r2, [r6]
+    strh r2, [r6]
+    strh r2, [r6]
+    strh r2, [r6]
+
+    // Get status code (3 bits) + dummy bit
+    mov r0, $0
+    .rept 4
+      lsl r0, $1
+      ldrh r2, [r6]
+      tst r2, $SD_DATA0
+      orrne r0, $0x1
+    .endr
+
+    // Pipe one byte, some cards do not start actually writing (ie. go busy?)
+    // until we pipe an extra clock? Perhaps not, but does no harm.
+    .rept 4
+      ldr r2, [r6]
+    .endr
+
+    // Check status code, bail on error
+    cmp r0, $0x5              // 0.010.1 means "data accepted" (0.status.1)
+    bne 3f                    // Wait and exit with error
+
+    // Break out if we are on the last block!
+    subs r5, $1
+    beq 5f
+
+    // Calculate the block checksum for the next block to send.
+    // (helps hiding busy latency!)
+    mov r0, r4
+    mov r1, sp
+    bl crc16_nibble_512_nolut   // Must be in IWRAM as well!
+
+    // Perform a wait on the data bus, DAT0 goes high when ready.
+    mov r1, $(CMD_WAIT_DATA)
+    2:
+      subs r1, r1, $1
+      beq 4f
+      ldrh r2, [r6]
+      tst r2, $(SD_DATA0)
+    beq 2b
+
+    b 1b  // Continue loop on the next block.
+
+
+  // SLOW path. Uses byte-level reads.
+9:
+  1: // Loop r5 times. Try to perform checksum while waiting for write to finish.
+
+    // Go ahead send the data! Send the first byte token (0xFE? should be 0xFC!)
+    mov r1, $0
+    mov r2, $0xFFFFFFFF
+    str r2, [r6]
+    str r2, [r6]
+    str r2, [r6]
+    strh r2, [r6]
+    strh r1, [r6]
+
+    mov r1, $(512 / 4 / 8)   // Pushing 512 bytes in halfwords (unrolled x8)
+    2:
+      .rept 8
+        ldrb r2, [r4], #1    // Load bytes from buffer
+        ldrb r3, [r4], #1
+        orr r2, r2, r3, lsl #8
+        ldrb r3, [r4], #1
+        orr r2, r2, r3, lsl #16
+        ldrb r3, [r4], #1
+        orr r2, r2, r3, lsl #24
+
+        str r2, [r7]         // Write using the 32 bit interface
+      .endr
+      subs r1, r1, $1
+      bne 2b
+
+    // Send checksum in one go
+    ldr r2, [sp, #0]
+    ldr r3, [sp, #4]
+    stm r7, {r2, r3}
+
+    // Response token is 8 bits, only transmitted via DAT0.
+    // Write one to the bus, read a couple more times (ignore 3 MSB)
+    mov  r2, $(~0)            // All data lines high after last bit
+    strh r2, [r6]
+    strh r2, [r6]
+    strh r2, [r6]
+    strh r2, [r6]
+
+    // Get status code (3 bits) + dummy bit
+    mov r0, $0
+    .rept 4
+      lsl r0, $1
+      ldrh r2, [r6]
+      tst r2, $SD_DATA0
+      orrne r0, $0x1
+    .endr
+
+    // Pipe one byte, some cards do not start actually writing (ie. go busy?)
+    // until we pipe an extra clock? Perhaps not, but does no harm.
+    .rept 4
+      ldr r2, [r6]
+    .endr
+
+    // Check status code, bail on error
+    cmp r0, $0x5              // 0.010.1 means "data accepted" (0.status.1)
+    bne 3f                    // Wait and exit with error
+
+    // Break out if we are on the last block!
+    subs r5, $1
+    beq 5f
+
+    // Calculate the block checksum for the next block to send.
+    // (helps hiding busy latency!)
+    mov r0, r4
+    mov r1, sp
+    bl crc16_nibble_512_nolut   // Must be in IWRAM as well!
+
+    // Perform a wait on the data bus, DAT0 goes high when ready.
+    mov r1, $(CMD_WAIT_DATA)
+    2:
+      subs r1, r1, $1
+      beq 4f
+      ldrh r2, [r6]
+      tst r2, $(SD_DATA0)
+    beq 2b
+
+    b 1b  // Continue loop on the next block.
+
+
+5:
+  // Perform a final wait, ensure we leave with no pending operations.
+  mov r0, $(CMD_WAIT_DATA)
+  2:
+    subs r0, r0, $1
+    beq 4f
+    ldrh r2, [r6]
+    tst r2, $(SD_DATA0)
+  beq 2b
+
+  add sp, $8
+  pop {r4-r11, lr}
+  mov r0, $0            // Return OK
+  bx lr
+
+3:  // Wait-and-exit on error
+  mov r0, $(CMD_WAIT_DATA)
+  2:
+    subs r0, r0, $1
+    beq 4f
+    ldrh r2, [r6]
+    tst r2, $(SD_DATA0)
+  beq 2b
+
+4:  // Return non zero on timeout/response error
+  add sp, $8
+  pop {r4-r11, lr}
+  mov r0, $1
+  bx lr
+
+#endif
 
 .pool
 

@@ -133,12 +133,7 @@ typedef struct {
   uint16_t sc_rca() { return drv_rca; }
 #endif
 
-void set_supercard_mode(unsigned mapped_area, bool write_access, bool sdcard_interface) {
-  // Bit0: Controls SDRAM vs internal Flash mapping
-  // Bit1: Controls whether the SD card interface is mapped into the ROM addresspace.
-  // Bit2: Controls read-only/write access. Doubles as SRAM bank selector!
-  uint16_t value = mapped_area | (sdcard_interface ? 0x2 : 0x0) | (write_access ? 0x4 : 0x0);
-
+void write_supercard_mode(uint16_t modebits) {
   // Write magic value and then the mode value (twice) to trigger the mode change.
   // Using asm to ensure we place a proper memory barrier.
   asm volatile (
@@ -148,8 +143,17 @@ void set_supercard_mode(unsigned mapped_area, bool write_access, bool sdcard_int
     "strh %2, [%0]\n"
     :: "l"(REG_SC_MODE_REG_ADDR),
        "l"(MODESWITCH_MAGIC),
-       "l"(value)
+       "l"(modebits)
     : "memory");
+}
+
+void set_supercard_mode(unsigned mapped_area, bool write_access, bool sdcard_interface) {
+  // Bit0: Controls SDRAM vs internal Flash mapping
+  // Bit1: Controls whether the SD card interface is mapped into the ROM addresspace.
+  // Bit2: Controls read-only/write access. Doubles as SRAM bank selector!
+  uint16_t value = mapped_area | (sdcard_interface ? 0x2 : 0x0) | (write_access ? 0x4 : 0x0);
+
+  write_supercard_mode(value);
 }
 
 // Waits for idle and sends a command. Does nothing afterwards

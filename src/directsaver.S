@@ -451,19 +451,43 @@ sc_write_sectors_w0:
     mov r2, $0
     bl sd_strh
 
-    mov r1, $(512)           // Pushing 512 bytes in bytes
+    #ifdef SUPERCARD_LITE_IO
+    mov r1, $(512 / 2)       // Pushing 512 bytes in half-words
     2:
+      ldrb r2, [r4], #1      // Load byte from buffer
+      ldrb r3, [r4], #1
+      orr r2, r2, r3, lsl #8
+      orr r2, r2, lsl #20
+      mov r3, r2, lsr #8
+
+      bl sd_stm2
+      subs r1, r1, $1
+      bne 2b
+    #else
+    mov r1, $(512)           // Pushing 512 bytes in bytes
+     2:
       ldrb r2, [r4], #1      // Load byte from buffer
       bl sd_str
       subs r1, r1, $1
       bne 2b
+    #endif
 
     .set i, 0
+    #ifdef SUPERCARD_LITE_IO
+    .rept 4                  // Send 16x4 bits of checksum
+      ldrh r2, [sp, #(i*2 + 48)]
+      orr r2, r2, lsl #20
+      mov r3, r2, lsr #8
+      bl sd_stm2
+      .set i, i+1
+    .endr
+    #else
     .rept 8                  // Send 16x4 bits of checksum
       ldrb r2, [sp, #(i + 48)]
       bl sd_str
       .set i, i+1
     .endr
+    #endif
 
     // Response token is 8 bits, only transmitted via DAT0.
     // Write one to the bus, read a couple more times (ignore 3 MSB)
@@ -780,6 +804,7 @@ SD_OPERATION(sd_ldrh, ldrh r2, [r5]);
 SD_OPERATION(sd_str,  str  r2, [r5]);
 SD_OPERATION(sd_strh, strh r2, [r5]);
 
+SD_OPERATION(sd_stm2, stmia r5, {r2, r3});
 SD_OPERATION(sd_ldm4, ldmia r5, {r2, r3, r6, r12});
 SD_OPERATION(sd_stm4, stmia r5, {r2, r3, r6, r12});
 
