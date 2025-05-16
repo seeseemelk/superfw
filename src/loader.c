@@ -43,7 +43,7 @@
 
 #define ING_PALETTE_BASE    240
 
-extern bool fastsd;
+extern bool slowsd;
 
 bool validate_gba_header(const uint8_t *header) {
   const t_rom_header *gbah = (t_rom_header*)header;
@@ -264,7 +264,7 @@ unsigned load_gba_rom(
     return ERR_LOAD_BADROM;
 
   // Honor fast loading (switch mirror if appropriate)
-  fastsd = use_fastsd;
+  slowsd = use_slowsd;
 
   uint8_t *ptr = (uint8_t*)(GBA_ROM_ADDR);
   for (uint32_t offset = 0; offset < gap_start; offset += LOAD_BS) {
@@ -275,6 +275,7 @@ unsigned load_gba_rom(
     UINT rdbytes;
     uint32_t tmp[LOAD_BS/4];
     if (FR_OK != f_read(&fd, tmp, toread, &rdbytes)) {
+      slowsd = true;
       f_close(&fd);
       return ERR_LOAD_BADROM;
     }
@@ -291,6 +292,7 @@ unsigned load_gba_rom(
     UINT rdbytes;
     uint32_t tmp[LOAD_BS/4];
     if (FR_OK != f_read(&fd, tmp, toread, &rdbytes)) {
+      slowsd = true;
       f_close(&fd);
       return ERR_LOAD_BADROM;
     }
@@ -301,7 +303,7 @@ unsigned load_gba_rom(
   }
   progress(1, 1);  // Mark as complete
 
-  fastsd = false;
+  slowsd = true;
 
   // Close the file, not super necessary really :P
   f_close(&fd);

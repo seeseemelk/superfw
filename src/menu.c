@@ -40,6 +40,7 @@
 
 extern t_card_info sd_info;
 extern bool fastew;
+extern bool slowsd;
 
 #ifdef SUPERCARD_LITE_IO
   #define FW_FLAVOUR           "Lite"
@@ -1551,7 +1552,7 @@ void render_settings(volatile uint8_t *frame) {
 
   if (msk & 0x00008) {
     draw_text_ovf(msgs[lang_id][MSG_SETT_FASTSD], frame, 8, 22 + 20*optcnt, 224);
-    draw_central_text(msgs[lang_id][use_fastsd ? MSG_KNOB_ENABLED : MSG_KNOB_DISABLED], frame, colx, 22 + 20*optcnt++);
+    draw_central_text(msgs[lang_id][use_slowsd ? MSG_KNOB_DISABLED : MSG_KNOB_ENABLED], frame, colx, 22 + 20*optcnt++);
   }
 
   if (msk & 0x00010) {
@@ -2447,7 +2448,9 @@ void menu_keypress(unsigned newkeys) {
           spop.qpop.clear_popup_ok = true;
         }
         else if (smenu.tools.selector == ToolsSDBench) {
+          slowsd = use_slowsd;
           int ret = sdbench_read(loadrom_progress_abort);
+          slowsd = true;
           if (ret < 0)
             spop.alert_msg = msgs[lang_id][MSG_ERR_GENERIC];
           else {
@@ -2511,7 +2514,7 @@ void menu_keypress(unsigned newkeys) {
         else if (smenu.set.selector == DefsPrefDS)
           autosave_prefer_ds ^= 1;
         else if (smenu.set.selector == SettFastSD)
-          use_fastsd ^= 1;
+          use_slowsd ^= 1;
         else if (smenu.set.selector == SettFastEWRAM)
           use_fastew = fastew ? (use_fastew ^ 1) : 0;
       }

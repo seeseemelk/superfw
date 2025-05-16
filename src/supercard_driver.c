@@ -27,7 +27,7 @@
 #include "crc.h"
 
 extern bool isgba;
-extern bool fastsd;
+extern bool slowsd;
 
 // If init is diabled, any driver variables are externally defined (and provided by some other object)
 // #define NO_SUPERCARD_INIT
@@ -39,7 +39,11 @@ extern bool fastsd;
 
 static inline bool use_fast_mirror() {
   // Use it only when in GBA mode and if fast-load is enabled.
-  return isgba && fastsd;
+  #ifdef SUPERCARD_LITE_IO
+    return false;              // SC lite can't use the faster waitstates.
+  #else
+    return isgba && !slowsd;
+  #endif
 }
 
 typedef int (*t_rdsec_fn)(uint8_t *buffer, unsigned count);

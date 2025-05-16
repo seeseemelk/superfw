@@ -32,7 +32,7 @@
 FATFS sdfs;          // FatFS mounted filesystem
 bool isgba = true;   // Has some alternative paths for NDS.
 bool fastew = false; // EWRAM can be overclocked (from the look of it at least).
-bool fastsd = false; // Whether we use faster SD mirrors for SD operations.
+bool slowsd = true;  // Whether we use slow SD mirrors for SD operations.
 
 uint32_t flash_deviceid;
 t_card_info sd_info;
