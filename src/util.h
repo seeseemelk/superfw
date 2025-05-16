@@ -19,8 +19,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "fatfs/ff.h"
-
 #ifndef _UTIL_H_
 #define _UTIL_H_
 
@@ -41,9 +39,6 @@ unsigned parseuint(const char *s);
 
 // Just checks that a file exists.
 bool check_file_exists(const char *fn);
-
-// Check a contiguous file and return its LBA address
-bool file_is_contiguous(const char *fn, LBA_t *lba);
 
 // Creates a path to a file (recursively if needed)
 void create_basepath(const char *fn);

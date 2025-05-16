@@ -69,13 +69,16 @@ int main(int argc, char **argv) {
   // Need to parse the NDS a bit: only patch arm9/arm7 areas!
   int offset = 0;
   while (offset < nds_fs) {
-    offset = dldi_stub_find(&nds[offset], nds_fs - offset);
-    if (offset < 0)
+    int next_offset = dldi_stub_find(&nds[offset], nds_fs - offset);
+    if (next_offset < 0)
       break;
+    offset += next_offset;
 
     t_dldi_header *dldi_stub = (t_dldi_header*)&nds[offset];
-    if (dldi_stub_validate(dldi_stub, dldi_fs))
+    if (dldi_stub_validate(dldi_stub, dldi_fs)) {
+      printf("Patching DLDI at offset %d\n", offset);
       dldi_stub_patch((t_dldi_driver*)dldi_stub, (t_dldi_driver*)drv);
+    }
     // Clear the header as well, after patching
     dldi_stub->magic = 0;
     dldi_stub->signature[0] = 0;

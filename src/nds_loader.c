@@ -187,9 +187,10 @@ unsigned load_nds(const char *filename, const void *dldi_driver) {
     // Find patching points in the ARM9 payload
     int offset = 0;
     while (offset < hdr->arm9_load_size) {
-      offset = dldi_stub_find(&arm9_addr[offset], hdr->arm9_load_size - offset);
-      if (offset < 0)
+      int next_offset = dldi_stub_find(&arm9_addr[offset], hdr->arm9_load_size - offset);
+      if (next_offset < 0)
         break;
+      offset += next_offset;
 
       t_dldi_header *dldi_stub = (t_dldi_header*)&arm9_addr[offset];
       if (dldi_stub_validate(dldi_stub, driver_size))
@@ -200,9 +201,10 @@ unsigned load_nds(const char *filename, const void *dldi_driver) {
     // Now do it for the ARM7 payload as well.
     offset = 0;
     while (offset < hdr->arm7_load_size) {
-      offset = dldi_stub_find(&arm7_addr[offset], hdr->arm7_load_size - offset);
-      if (offset < 0)
+      int next_offset = dldi_stub_find(&arm7_addr[offset], hdr->arm7_load_size - offset);
+      if (next_offset < 0)
         break;
+      offset += next_offset;
 
       t_dldi_header *dldi_stub = (t_dldi_header*)&arm7_addr[offset];
       if (dldi_stub_validate(dldi_stub, driver_size))

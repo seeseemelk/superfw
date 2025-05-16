@@ -16,9 +16,14 @@
  * <http://www.gnu.org/licenses/>.
  */
 
+#ifndef _SAVE_H_
+#define _SAVE_H_
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+
+#include "fatfs/ff.h"
 
 #define ERR_SAVE_FLUSH_NOSENTINEL   1
 #define ERR_SAVE_FLUSH_WRITEFAIL    2
@@ -53,4 +58,9 @@ bool program_sram_dump(const char *save_filename, unsigned backup_count);
 
 // Erases the SRAM (using ones since it seems to be the most common mem type)
 void erase_sram();
+
+// Check a contiguous file and return its LBA address
+bool file_is_contiguous(const char *fn, LBA_t *lba);
+
+#endif
 

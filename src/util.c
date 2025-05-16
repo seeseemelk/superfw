@@ -21,7 +21,6 @@
 #include <string.h>
 
 #include "utf_util.h"
-#include "fatfs/ff.h"
 
 const char *file_basename(const char *fullpath) {
   const char * ret = strrchr(fullpath, '/');
