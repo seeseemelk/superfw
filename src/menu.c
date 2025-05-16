@@ -43,8 +43,10 @@ extern bool fastew;
 
 #ifdef SUPERCARD_LITE_IO
   #define FW_FLAVOUR           "Lite"
+  #define FW_MAX_SIZE          (496*1024)
 #else
   #define FW_FLAVOUR           "SD"
+  #define FW_MAX_SIZE          (512*1024)
 #endif
 
 #define MENUTAB_RECENT          0    // Browses recently loaded ROMs (can be disabled / hidden)
@@ -853,7 +855,7 @@ static void browser_open(const char *fn, uint32_t fs) {
     // A SuperFW firmware update is selected!
     if (!enable_flashing)
       spop.alert_msg = msgs[lang_id][MSG_FWUP_DISABLED];
-    else if (fs > 512*1024)
+    else if (fs > FW_MAX_SIZE)
       spop.alert_msg = msgs[lang_id][MSG_FWUP_ERRSZ];
     else {
       // Read the header and perform some more basic checks!
