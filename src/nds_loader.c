@@ -32,15 +32,16 @@
 // random places in RAM and cause some funny business.
 
 #define NDS_HEADER_ADDR        0x027FFE00
-#define MAINRAM_TMP_WRAM7_ADDR 0x023EF000   // Right after the menu payload
+#define MAINRAM_TMP_WRAM7_ADDR 0x02000000   // Use main RAM (top)
+#define MAINRAM_TMP_VRAM_ADDR  0x06860000   // Use VRAM bank D, already enabled
 
 #define MAINRAM_MAX_PAYLOAD    0x003BFE00   // (That's 4MB minus 256KB and 512bytes)
 #define MAINRAM_MIN_ADDR       0x02000000
 #define MAINRAM_MAX_ADDR       (MAINRAM_MIN_ADDR + MAINRAM_MAX_PAYLOAD)
 
-#define WRAM_MAX_PAYLOAD       0x0000FE00   // (That's 64KB minus 512bytes)
-#define WRAM_MIN_ADDR          0x037F8000   // That's 32KiB before the WRAM-ARM7)
-#define WRAM_MAX_ADDR          0x03807E00   // That's 31.5KiB within WRAM-ARM7)
+#define WRAM_MAX_PAYLOAD       0x00018000   // (We *could* have up to 64+32KiB)
+#define WRAM_MIN_ADDR          0x037F8000   // (That's 32KiB before the WRAM-ARM7)
+#define WRAM_MAX_ADDR          0x03810000   // (WRAM-ARM7 is 64KiB big)
 
 typedef struct {
   char gtitle[12];             // Game title (ASCII)
@@ -128,6 +129,9 @@ unsigned load_nds(const char *filename, const void *dldi_driver) {
   // Proceed to sanity check the header code fields.
   bool arm7_on_wram = (hdr->arm7_entrypoint >> 24) == 3;
 
+  const t_dldi_driver *driver = (t_dldi_driver*)dldi_driver;
+  const unsigned driver_size = (1 << driver->h.req_size);
+
   // ARM9 size, addresses and entrypoint
   if (hdr->arm9_load_size > MAINRAM_MAX_PAYLOAD)
     return ERR_NDS_TOO_BIG;
@@ -158,18 +162,11 @@ unsigned load_nds(const char *filename, const void *dldi_driver) {
 
   // Clear the main memory areas where payload can be loaded.
   memset32((void*)MAINRAM_MIN_ADDR,       0, MAINRAM_MAX_PAYLOAD);
-  memset32((void*)MAINRAM_TMP_WRAM7_ADDR, 0, WRAM_MAX_PAYLOAD);
 
-  // Proceed to load the binary payloads
-  uint8_t *arm9_addr = (uint8_t*)((uintptr_t)hdr->arm9_load_addr);
-  if (FR_OK != f_lseek(&fd, hdr->arm9_rom_offset))
-    return ERR_FILE_ACCESS;
-  if (FR_OK != f_read(&fd, arm9_addr, hdr->arm9_load_size, &rdbytes) ||
-                      rdbytes != hdr->arm9_load_size)
-    return ERR_FILE_ACCESS;
+  // Process the arm7 payload first. We load and patch it.
 
   // If the arm7 payload goes into the ARM7-WRAM, copy it temporarily at the
-  // end of the main ram. The ARM7 will know how to copy it if needed.
+  // begining of the main ram, then move it to VRAM-D. The ARM7 knows how to copy it if needed.
   uint8_t *arm7_addr = arm7_on_wram ? (uint8_t*)((uintptr_t)MAINRAM_TMP_WRAM7_ADDR) :
                                       (uint8_t*)((uintptr_t)hdr->arm7_load_addr);
   if (FR_OK != f_lseek(&fd, hdr->arm7_rom_offset))
@@ -178,12 +175,36 @@ unsigned load_nds(const char *filename, const void *dldi_driver) {
                       rdbytes != hdr->arm7_load_size)
     return ERR_FILE_ACCESS;
 
+  if (dldi_driver) {
+    int offset = 0;
+    while (offset < hdr->arm7_load_size) {
+      int next_offset = dldi_stub_find(&arm7_addr[offset], hdr->arm7_load_size - offset);
+      if (next_offset < 0)
+        break;
+      offset += next_offset;
+
+      t_dldi_header *dldi_stub = (t_dldi_header*)&arm7_addr[offset];
+      if (dldi_stub_validate(dldi_stub, driver_size))
+        dldi_stub_patch((t_dldi_driver*)dldi_stub, driver);
+      offset += 4;
+    }
+  }
+
+  // If we used a temporary address for the ARM7 payload, move it now to its VRAM buffer
+  if (arm7_on_wram)
+    memcpy32((void*)MAINRAM_TMP_VRAM_ADDR, (void*)MAINRAM_TMP_WRAM7_ADDR, hdr->arm7_load_size);
+
+  // Proceed to load the arm9 payload now
+  uint8_t *arm9_addr = (uint8_t*)((uintptr_t)hdr->arm9_load_addr);
+  if (FR_OK != f_lseek(&fd, hdr->arm9_rom_offset))
+    return ERR_FILE_ACCESS;
+  if (FR_OK != f_read(&fd, arm9_addr, hdr->arm9_load_size, &rdbytes) ||
+                      rdbytes != hdr->arm9_load_size)
+    return ERR_FILE_ACCESS;
+
   f_close(&fd);
 
-  // DLDI patching.
   if (dldi_driver) {
-    const t_dldi_driver *driver = (t_dldi_driver*)dldi_driver;
-    const unsigned driver_size = (1 << driver->h.req_size);
     // Find patching points in the ARM9 payload
     int offset = 0;
     while (offset < hdr->arm9_load_size) {
@@ -193,20 +214,6 @@ unsigned load_nds(const char *filename, const void *dldi_driver) {
       offset += next_offset;
 
       t_dldi_header *dldi_stub = (t_dldi_header*)&arm9_addr[offset];
-      if (dldi_stub_validate(dldi_stub, driver_size))
-        dldi_stub_patch((t_dldi_driver*)dldi_stub, driver);
-      offset += 4;
-    }
-
-    // Now do it for the ARM7 payload as well.
-    offset = 0;
-    while (offset < hdr->arm7_load_size) {
-      int next_offset = dldi_stub_find(&arm7_addr[offset], hdr->arm7_load_size - offset);
-      if (next_offset < 0)
-        break;
-      offset += next_offset;
-
-      t_dldi_header *dldi_stub = (t_dldi_header*)&arm7_addr[offset];
       if (dldi_stub_validate(dldi_stub, driver_size))
         dldi_stub_patch((t_dldi_driver*)dldi_stub, driver);
       offset += 4;

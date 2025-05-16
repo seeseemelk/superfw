@@ -27,8 +27,8 @@ ENTRY(entrypoint)
 MEMORY {
     /* Run from a EWRAM mirror (for better NDS support!) */
     IWRAM   : ORIGIN = 0x03000000, LENGTH = 32K
-    /* Limit fw to 188KB, so we can fit NDS mode */
-    EWRAM   : ORIGIN = 0x027C0000, LENGTH = 188K
+    /* Limit fw to 252KB, so we can fit NDS mode */
+    EWRAM   : ORIGIN = 0x027C0000, LENGTH = 252K
 }
 
 /* Set stack pointers the same way as the BIOS */

@@ -36,7 +36,7 @@
 #define NDS_SWIDTH    256
 #define NDS_SHEIGHT   192
 
-#define NDS_WRAM_MIRROR  0x023EF000     /* Temp WRAM storage area */
+#define NDS_WRAM_MIRROR  0x06000000     /* Temp WRAM storage area (using VRAM-D) */
 #define BOOTMIRROR_ADDR  0x023FF000     /* Bootloader relocation (NDS mode) */
 
 #define BOOTNDS_SP7_SVC  0x023FFE00     /* From 0x023FFD80 to 0x023FFE00 */
@@ -69,10 +69,7 @@
 #define REG_DISPCNT_A    0x04000000
 #define REG_DISPCNT_B    0x04001000
 #define REG_POWERCNT     0x04000304
-#define REG_VRAMCNT_A    0x04000240
-#define REG_VRAMCNT_B    0x04000241
-#define REG_VRAMCNT_C    0x04000242
-#define REG_VRAMCNT_D    0x04000243
+#define REG_VRAMCNT_ABCD 0x04000240
 
 #define REG_IPCSYNC      0x04000180
 
@@ -523,13 +520,12 @@ arm9_bootaddr:
   ldr r0, =REG_BG2X ; str r1, [r0]
   ldr r0, =REG_BG2Y ; str r1, [r0]
 
-  ldr r0, =REG_VRAMCNT_A   @ Enable VRAM-A and allow CPU access
-  mov r1, $0x81
-  strb r1, [r0]
-  mov r1, $0               @ Disable other VRAM banks
-  ldr r0, =REG_VRAMCNT_B; strb r1, [r0]
-  ldr r0, =REG_VRAMCNT_C; strb r1, [r0]
-  ldr r0, =REG_VRAMCNT_D; strb r1, [r0]
+  @ Enable VRAM-A and allow CPU access
+  @ Enable VRAM-D and map it to the ARM9
+  @ Disable other VRAM banks
+  ldr r0, =REG_VRAMCNT_ABCD
+  ldr r1, =0x80000081
+  str r1, [r0]
 
   @ Init LCD logo with the logo on the top screen, using 8 bit bitmap mode.
   mov r0, $0x06000000

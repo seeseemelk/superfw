@@ -28,6 +28,7 @@
 #define REG_IPCSYNC      0x04000180
 #define REG_IME          0x04000208
 #define REG_MEMCTRL      0x04000800
+#define REG_VRAMCNT_CD   0x04000242
 
 .section .text
 .thumb
@@ -53,8 +54,7 @@
 // This code starts an already loaded NDS rom. The memory map at this point:
 // Main RAM:
 //  - [0x02000000, 0x023BFE00)   - Loaded ARM9 payload
-//  - [0x023C0000, 0x023EF000)   - Current superFW ewram payload (this code, 188KiB)
-//  - [0x023EF000, 0x023FF000)   - Loaded ARM7 payload (if it's in WRAM7, 64KiB)
+//  - [0x023C0000, 0x023FF000)   - Current superFW ewram payload (this code, 252KiB)
 //  - [0x023FF000, 0x023FFC00)   - Bootloader reloc mirror (max 3KiB)
 //  - [0x023FFC00, 0x023FFD80)   - ARM9 stack (only during boot, 3*128 bytes)
 //  - [0x023FFD80, 0x023FFE00)   - ARM7 stack (in bootloader, max 128 bytes)
@@ -78,6 +78,11 @@ nds_launch:
   mov r1, $0x3
   strb r1, [r0]
 
+  // Also remap the VRAM-D as WRAM/VRAM, it's used as tmp storage for the ARM7 payload
+  ldr r0, =REG_VRAMCNT_CD
+  mov r1, $0x8200
+  strh r1, [r0]
+
   // Signal the ARM7 that we are about to launch/reset.
   SET_SYNC(0x5)
 
@@ -87,6 +92,11 @@ nds_launch:
 
   // Wait until the ARM7 is done copying and is ready to reset.
   WAIT_SYNC(0xF, 512)
+
+  // The ARM7 finished copying any data, we disable VRAM_D
+  ldr r0, =REG_VRAMCNT_CD
+  mov r1, $0
+  strh r1, [r0]
 
   // The ARM7 is ready, and waiting for reset signal.
   // Initialize any state to a well known-state for the NDS rom.
