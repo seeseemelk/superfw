@@ -611,12 +611,14 @@ font_start:
 font_end:
 
 assets_start:
+  #ifdef BUNDLE_GBC_EMULATOR
   .ascii "GCEM"                                        @ GB/C emulator (GoombaColor)
   .word (comp_goomba_emu_end - comp_goomba_emu_start)  @ Payload size
   comp_goomba_emu_start:
     .incbin "emu/jagoombacolor_v0.5.gba.comp"
   comp_goomba_emu_end:
   .balign 4
+  #endif
 
   .word 0               @ End of asset list
   .word 0

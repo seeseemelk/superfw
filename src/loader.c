@@ -340,6 +340,11 @@ void load_gbc_rom(const char *fn, uint32_t fs, progress_fn progress) {
   // Map the full SDRAM address space
   set_supercard_mode(MAPPED_SDRAM, true, false);
   const void *emupload = get_vfile_ptr("GCEM");
+  if (!emupload) {
+    // In case the emulator is not bundled in.
+    set_supercard_mode(MAPPED_SDRAM, true, true);
+    return;
+  }
   ptr += apunpack16(emupload, ptr);
   set_supercard_mode(MAPPED_SDRAM, true, true);
 

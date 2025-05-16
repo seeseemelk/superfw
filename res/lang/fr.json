@@ -203,6 +203,6 @@
     "IMENU_SAVING_BLOCKED": "Sauvegarde en cours !",
     "MSG_SETT_FASTSD": "Charg. ROM rapide",
     "MSG_FASTSD_I": "Un mode de chargement rapide des ROMs. Peut entraîner des plantages ou des problèmes de lecture sur certains appareils",
-    "MSG_SETT_FASTEW": "EWRAM overclock",
-    "MSG_FASTEW_I": "Overclock EWRAM for some extra performance. Not available on NDS or GBA Micro"
+    "MSG_SETT_FASTEW": "Overclock EWRAM",
+    "MSG_FASTEW_I": "Overclocke la EWRAM pour améliorer les performances. Option non disponible sur NDS et GBA Micro"
 }

@@ -16,7 +16,7 @@ BOARD ?= sd
 ifeq ($(BOARD),lite)
   GLOBAL_DEFINES ?= -DSUPERCARD_LITE_IO
 else ifeq ($(BOARD),sd)
-  # No need for extra flags
+  GLOBAL_DEFINES ?= -DBUNDLE_GBC_EMULATOR
 else
   $(error No valid board specified in BOARD)
 endif

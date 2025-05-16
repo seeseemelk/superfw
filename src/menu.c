@@ -825,6 +825,7 @@ static void gbc_launch(const char *fn, uint32_t fs) {
     }
     else {
       load_gbc_rom(fn, fs, loadrom_progress);
+      spop.alert_msg = msgs[lang_id][MSG_ERR_NOEMU];
     }
   }
 }

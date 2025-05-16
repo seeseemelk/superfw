@@ -11,6 +11,7 @@ OTHER_LANGS = [
   "it",
   "de",
   "ca",
+  "cs",
   "zh",
   "uk",
   "ru",
