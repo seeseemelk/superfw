@@ -41,6 +41,12 @@
 extern t_card_info sd_info;
 extern bool fastew;
 
+#ifdef SUPERCARD_LITE_IO
+  #define FW_FLAVOUR           "Lite"
+#else
+  #define FW_FLAVOUR           "SD"
+#endif
+
 #define MENUTAB_RECENT          0    // Browses recently loaded ROMs (can be disabled / hidden)
 #define MENUTAB_ROMBROWSE       1    // Browses ROMs and launches games.
 #define MENUTAB_SETTINGS        2    // General settings / defaults
@@ -1679,7 +1685,7 @@ void render_info(volatile uint8_t *frame) {
   switch (smenu.info.selector) {
   case 0:
     draw_central_text("by davidgf", frame, 120, 60);
-    npf_snprintf(tmp, sizeof(tmp), "Version %lu.%lu (%08lx)", vmaj, vmin, gitver);
+    npf_snprintf(tmp, sizeof(tmp), "Version %lu.%lu " FW_FLAVOUR " (%08lx)", vmaj, vmin, gitver);
     draw_central_text(tmp, frame, 120, 90);
     npf_snprintf(tmp, sizeof(tmp), "Flash device ID: %08lx", flash_deviceid);
     draw_central_text(tmp, frame, 120, 110);
