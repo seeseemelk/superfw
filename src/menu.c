@@ -333,6 +333,7 @@ _Static_assert (sizeof(t_sdram_state) <= 15*1024*1024, "scratch SDRAM doesn't ex
 typedef struct {
   unsigned char name;
   void (*render)(char* buf, int buflen);
+  void (*on_change)(void);
   
   uint32_t *from_bool;
 
@@ -2413,6 +2414,9 @@ void menu_keypress(unsigned newkeys) {
           } else if (item->from_int != NULL && *item->from_int > 0) {
             *item->from_int = *item->from_int - 1;
           }
+          if (item->on_change) {
+            item->on_change();
+          }
         }
         if (newkeys & KEY_BUTTRIGHT) {
           const UiMenuItem *item = &ui_settings_items[smenu.uiset.selector];
@@ -2420,6 +2424,9 @@ void menu_keypress(unsigned newkeys) {
             *item->from_bool ^= 1;
           } else if (item->from_int != NULL) {
             *item->from_int = MIN(item->from_int_max - 1, *item->from_int + 1);
+          }
+          if (item->on_change) {
+            item->on_change();
           }
         }
       }
