@@ -1086,6 +1086,13 @@ static void browser_reload() {
     if (f_readdir(&d, &info) != FR_OK || !info.fname[0])
       break;
 
+    if (!show_hidden_files) {
+      if (info.fname[0] == '.') // Skip dot files
+        continue;
+      if (info.fattrib & AM_HID) // Skip hidden files
+        continue;
+    }
+
     if (fcount >= BROWSER_MAXFN_CNT)
       break;
 
@@ -1664,6 +1671,7 @@ static const UiMenuItem ui_settings_items[] = {
   { .name = MSG_UIS_THEME, .render = render_ui_setting_theme, .from_int = &menu_theme, .from_int_max = THEME_COUNT },
   { .name = MSG_UIS_LANG, .render = render_ui_setting_lang, .from_int = &lang_id, .from_int_max = LANG_COUNT },
   { .name = MSG_UIS_RECNT, .from_bool = &recent_menu },
+  { .name = MSG_UIS_SHOWHIDDEN, .from_bool = &show_hidden_files, .on_change = browser_reload },
   { .name = MSG_UIS_ANSPD, .from_int = &anim_speed, .from_int_offset = MSG_UIS_SPD0, .from_int_max = animspd_cnt },
 };
 #define UI_SETTINGS_ITEMS_COUNT (sizeof(ui_settings_items)/sizeof(UiMenuItem))
