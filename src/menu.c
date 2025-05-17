@@ -84,14 +84,6 @@ extern bool slowsd;
 #define FLASH_UNLOCK_KEYS      (KEY_BUTTDOWN|KEY_BUTTB|KEY_BUTTSTA)
 #define FLASH_GO_KEYS          (KEY_BUTTUP|KEY_BUTTL|KEY_BUTTR)
 
-enum {
-  UiSetTheme = 0,
-  UiSetLang  = 1,
-  UiSetRect  = 2,
-  UiSetASpd  = 3,
-  UiSetSave  = 4,
-  UiSetMAX   = 4,
-};
 
 enum {
   ToolsSDRAMTest   = 0,
@@ -337,6 +329,17 @@ typedef struct {
 } t_sdram_state;
 
 _Static_assert (sizeof(t_sdram_state) <= 15*1024*1024, "scratch SDRAM doesn't exceed 15MB");
+
+typedef struct {
+  unsigned char name;
+  void (*render)(char* buf, int buflen);
+  
+  uint32_t *from_bool;
+
+  uint32_t *from_int;
+  unsigned from_int_offset;
+  uint32_t from_int_max;
+} UiMenuItem;
 
 t_sdram_state *sdr_state = (t_sdram_state*)0x08000000;
 uint8_t *hiscratch = (uint8_t*)ROM_HISCRATCH_U8;
@@ -1648,28 +1651,48 @@ void render_settings(volatile uint8_t *frame) {
   draw_central_text(msgs[lang_id][MSG_UIS_SAVE], frame, 120, 114);
 }
 
+void render_ui_setting_theme(char *buf, int buflen) {
+  npf_snprintf(buf, buflen, "< %lu >", menu_theme + 1U);
+}
+
+void render_ui_setting_lang(char *buf, int buflen) {
+  npf_snprintf(buf, buflen, "< %s >", msgs[lang_id][MSG_LANG_NAME]);
+}
+
+static const UiMenuItem ui_settings_items[] = {
+  { .name = MSG_UIS_THEME, .render = render_ui_setting_theme, .from_int = &menu_theme, .from_int_max = THEME_COUNT },
+  { .name = MSG_UIS_LANG, .render = render_ui_setting_lang, .from_int = &lang_id, .from_int_max = LANG_COUNT },
+  { .name = MSG_UIS_RECNT, .from_bool = &recent_menu },
+  { .name = MSG_UIS_ANSPD, .from_int = &anim_speed, .from_int_offset = MSG_UIS_SPD0, .from_int_max = animspd_cnt },
+};
+#define UI_SETTINGS_ITEMS_COUNT (sizeof(ui_settings_items)/sizeof(UiMenuItem))
+
 void render_ui_settings(volatile uint8_t *frame) {
   const unsigned colx = 170;
   char tmpbuf[64];
-  npf_snprintf(tmpbuf, sizeof(tmpbuf), "< %lu >", menu_theme + 1U);
-  draw_text_ovf(msgs[lang_id][MSG_UIS_THEME], frame, 8, 22, 224);
-  draw_central_text(tmpbuf, frame, colx, 22 );
 
-  npf_snprintf(tmpbuf, sizeof(tmpbuf), "< %s >", msgs[lang_id][MSG_LANG_NAME]);
-  draw_text_ovf(msgs[lang_id][MSG_UIS_LANG], frame, 8, 22 + 20, 224);
-  draw_central_text(tmpbuf, frame, colx, 22 + 20 );
+  int y = 0;
+  for (unsigned i = 0; i < UI_SETTINGS_ITEMS_COUNT; i++) {
+    const UiMenuItem *item = &ui_settings_items[i];
+    if (item->render) {
+      item->render(tmpbuf, sizeof(tmpbuf));
+      draw_text_ovf(msgs[lang_id][item->name], frame, 8, 22 + y, 224);
+      draw_central_text(tmpbuf, frame, colx, 22 + y);
+    } else if (item->from_bool) {
+      draw_text_ovf(msgs[lang_id][item->name], frame, 8, 22 + y, 224);
+      draw_central_text(msgs[lang_id][*item->from_bool ? MSG_KNOB_ENABLED : MSG_KNOB_DISABLED], frame, colx, 22 + y);
+    } else if (item->from_int) {
+      draw_text_ovf(msgs[lang_id][item->name], frame, 8, 22 + y, 224);
+      draw_central_text(msgs[lang_id][item->from_int_offset + *item->from_int], frame, colx, 22 + y);
+    }
+    y += 20;
+  }
 
-  draw_text_ovf(msgs[lang_id][MSG_UIS_RECNT], frame, 8, 22 + 40, 224);
-  draw_central_text(msgs[lang_id][recent_menu ? MSG_KNOB_ENABLED : MSG_KNOB_DISABLED], frame, colx, 22 + 40 );
-
-  draw_text_ovf(msgs[lang_id][MSG_UIS_ANSPD], frame, 8, 22 + 60, 224);
-  draw_central_text(msgs[lang_id][MSG_UIS_SPD0 + anim_speed], frame, colx, 22 + 60 );
-
-  if (smenu.uiset.selector != UiSetSave)
+  if (smenu.uiset.selector != UI_SETTINGS_ITEMS_COUNT)
     for (unsigned i = 0; i < 240; i += 16)
       render_icon_trans(i, 22 + smenu.uiset.selector * 20, 63);
 
-  if (smenu.uiset.selector != UiSetSave)
+  if (smenu.uiset.selector != UI_SETTINGS_ITEMS_COUNT)
     draw_box_outline(frame, 20, 220, 132, 152, FG_COLOR);
   else
     draw_box_full(frame, 20, 220, 132, 152, FG_COLOR, HI_COLOR);
@@ -2381,29 +2404,27 @@ void menu_keypress(unsigned newkeys) {
       if (newkeys & KEY_BUTTUP)
         smenu.uiset.selector = MAX(0, smenu.uiset.selector - 1);
       if (newkeys & KEY_BUTTDOWN)
-        smenu.uiset.selector = MIN(UiSetMAX, smenu.uiset.selector + 1);
-      if (newkeys & KEY_BUTTLEFT) {
-        if (smenu.uiset.selector == UiSetTheme)
-          menu_theme = menu_theme ? menu_theme - 1 : 0;
-        else if (smenu.uiset.selector == UiSetASpd)
-          anim_speed = anim_speed ? anim_speed - 1 : 0;
-        else if (smenu.uiset.selector == UiSetRect)
-          recent_menu ^= 1;
-        else if (smenu.uiset.selector == UiSetLang)
-          lang_id = (lang_id + LANG_COUNT - 1) % LANG_COUNT;
-      }
-      if (newkeys & KEY_BUTTRIGHT) {
-        if (smenu.uiset.selector == UiSetTheme)
-          menu_theme = MIN(THEME_COUNT - 1, menu_theme + 1);
-        else if (smenu.uiset.selector == UiSetASpd)
-          anim_speed = MIN(animspd_cnt - 1, anim_speed + 1);
-        else if (smenu.uiset.selector == UiSetRect)
-          recent_menu ^= 1;
-        else if (smenu.uiset.selector == UiSetLang)
-          lang_id = (lang_id + 1) % LANG_COUNT;
+        smenu.uiset.selector = MIN(UI_SETTINGS_ITEMS_COUNT, smenu.uiset.selector + 1);
+      if (smenu.uiset.selector < UI_SETTINGS_ITEMS_COUNT) {
+        if (newkeys & KEY_BUTTLEFT) {
+          const UiMenuItem *item = &ui_settings_items[smenu.uiset.selector];
+          if (item->from_bool != NULL) {
+            *item->from_bool ^= 1;
+          } else if (item->from_int != NULL && *item->from_int > 0) {
+            *item->from_int = *item->from_int - 1;
+          }
+        }
+        if (newkeys & KEY_BUTTRIGHT) {
+          const UiMenuItem *item = &ui_settings_items[smenu.uiset.selector];
+          if (item->from_bool != NULL) {
+            *item->from_bool ^= 1;
+          } else if (item->from_int != NULL) {
+            *item->from_int = MIN(item->from_int_max - 1, *item->from_int + 1);
+          }
+        }
       }
 
-      if (newkeys & KEY_BUTTA && smenu.uiset.selector == UiSetSave) {
+      if (newkeys & KEY_BUTTA && smenu.uiset.selector == UI_SETTINGS_ITEMS_COUNT) {
         smenu.uiset.selector = 0;
         if (save_ui_settings())
           spop.alert_msg = msgs[lang_id][MSG_OK_SETSAVE];
