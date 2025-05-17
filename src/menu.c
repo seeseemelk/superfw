@@ -1667,8 +1667,24 @@ void render_ui_setting_lang(char *buf, int buflen) {
   npf_snprintf(buf, buflen, "< %s >", msgs[lang_id][MSG_LANG_NAME]);
 }
 
+void reload_theme() {
+  // Palette 0..15 contains the main menu template colors
+  MEM_PALETTE[FG_COLOR] = themes[menu_theme].fg_color;
+  MEM_PALETTE[BG_COLOR] = themes[menu_theme].bg_color;
+  MEM_PALETTE[FT_COLOR] = themes[menu_theme].ft_color;
+  MEM_PALETTE[HI_COLOR] = themes[menu_theme].hi_color;
+  // In-game menu palette
+  MEM_PALETTE[INGMENU_PAL_FG] = themes[menu_theme].fg_color;
+  MEM_PALETTE[INGMENU_PAL_BG] = themes[menu_theme].bg_color;
+  MEM_PALETTE[INGMENU_PAL_HI] = themes[menu_theme].ft_color;
+  MEM_PALETTE[INGMENU_PAL_SH] = themes[menu_theme].sh_color;
+
+  // Palette entries for icons and other objects
+  MEM_PALETTE[256 + SEL_COLOR] = themes[menu_theme].hi_blend;
+}
+
 static const UiMenuItem ui_settings_items[] = {
-  { .name = MSG_UIS_THEME, .render = render_ui_setting_theme, .from_int = &menu_theme, .from_int_max = THEME_COUNT },
+  { .name = MSG_UIS_THEME, .render = render_ui_setting_theme, .from_int = &menu_theme, .from_int_max = THEME_COUNT, .on_change = reload_theme },
   { .name = MSG_UIS_LANG, .render = render_ui_setting_lang, .from_int = &lang_id, .from_int_max = LANG_COUNT },
   { .name = MSG_UIS_RECNT, .from_bool = &recent_menu },
   { .name = MSG_UIS_SHOWHIDDEN, .from_bool = &show_hidden_files, .on_change = browser_reload },
@@ -1759,22 +1775,6 @@ void render_tools(volatile uint8_t *frame) {
   }
 }
 
-void reload_theme(unsigned thnum) {
-  // Palette 0..15 contains the main menu template colors
-  MEM_PALETTE[FG_COLOR] = themes[thnum].fg_color;
-  MEM_PALETTE[BG_COLOR] = themes[thnum].bg_color;
-  MEM_PALETTE[FT_COLOR] = themes[thnum].ft_color;
-  MEM_PALETTE[HI_COLOR] = themes[thnum].hi_color;
-  // In-game menu palette
-  MEM_PALETTE[INGMENU_PAL_FG] = themes[thnum].fg_color;
-  MEM_PALETTE[INGMENU_PAL_BG] = themes[thnum].bg_color;
-  MEM_PALETTE[INGMENU_PAL_HI] = themes[thnum].ft_color;
-  MEM_PALETTE[INGMENU_PAL_SH] = themes[thnum].sh_color;
-
-  // Palette entries for icons and other objects
-  MEM_PALETTE[256 + SEL_COLOR] = themes[thnum].hi_blend;
-}
-
 // Renders the menu. Arg0 represents the frame count difference with the
 // previous rendered frame (for animations and similar stuff).
 void menu_render(unsigned fcnt) {
@@ -1862,7 +1862,7 @@ void menu_init(int sram_testres) {
   // Load recent ROMs (we could disable this for speed)
   recent_reload();
 
-  reload_theme(menu_theme);
+  reload_theme();
 
   smenu.menu_tab = (recent_menu && smenu.recent.maxentries) ? MENUTAB_RECENT : MENUTAB_ROMBROWSE;
 
@@ -2447,7 +2447,6 @@ void menu_keypress(unsigned newkeys) {
           spop.alert_msg = msgs[lang_id][MSG_ERR_SETSAVE];
       }
 
-      reload_theme(menu_theme);
       break;
 
     case MENUTAB_TOOLS:
